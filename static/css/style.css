@@ -1,23 +1,23 @@
 /* ── Variables ──────────────────────────────────────────────── */
 :root {
-    --bg-0:   #0d1117;
-    --bg-1:   #161b22;
-    --bg-2:   #1c2128;
-    --bg-3:   #22272e;
-    --border: #30363d;
-    --border-subtle: #21262d;
+    --bg-0:   #0f172a;
+    --bg-1:   #1e293b;
+    --bg-2:   #263348;
+    --bg-3:   #334155;
+    --border: #334155;
+    --border-subtle: #1e293b;
 
-    --text-0: #e6edf3;
-    --text-1: #8b949e;
-    --text-2: #656d76;
+    --text-0: #f1f5f9;
+    --text-1: #94a3b8;
+    --text-2: #64748b;
 
-    --blue:   #2f81f7;
-    --green:  #3fb950;
-    --red:    #f85149;
-    --yellow: #e3b341;
-    --orange: #f0883e;
-    --purple: #bc8cff;
-    --teal:   #39d353;
+    --blue:   #3b82f6;
+    --green:  #22c55e;
+    --red:    #ef4444;
+    --yellow: #f59e0b;
+    --orange: #f97316;
+    --purple: #a78bfa;
+    --teal:   #2dd4bf;
 
     /* legacy aliases used by templates */
     --bg-primary:   var(--bg-0);
@@ -567,6 +567,106 @@ select.form-control {
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-2); }
 
+/* ── Report Timeline Diagram ────────────────────────────────── */
+.report-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.report-timeline {
+    position: relative;
+    padding-left: 2rem;
+}
+
+.report-timeline::before {
+    content: '';
+    position: absolute;
+    left: 9px;
+    top: 18px;
+    bottom: 4px;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--border), transparent);
+}
+
+.report-event {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    position: relative;
+}
+
+.report-event-dot {
+    position: absolute;
+    left: -2rem;
+    top: 10px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid var(--bg-0);
+    flex-shrink: 0;
+    z-index: 1;
+    box-shadow: 0 0 0 2px var(--border);
+}
+
+.report-event-body {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.6rem 0.875rem;
+    flex: 1;
+    min-width: 0;
+    transition: border-color .15s;
+}
+
+.report-event-body:hover { border-color: var(--text-2); }
+
+.report-event-header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.report-event-time {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.7rem;
+    color: var(--text-2);
+    flex-shrink: 0;
+}
+
+.report-event-phase {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.report-event-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-0);
+    line-height: 1.35;
+}
+
+.report-mitre {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.1rem 0.4rem;
+    background: var(--bg-0);
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.7rem;
+    color: var(--text-2);
+}
+
 /* ── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 768px) {
     .container  { padding: 1rem; }
@@ -576,4 +676,14 @@ select.form-control {
     .form-row   { grid-template-columns: 1fr; }
     .page-header { flex-direction: column; align-items: flex-start; }
     .timeline-actions { flex-wrap: wrap; }
+    .timeline-detail-header { padding: 1rem; }
+    .report-event-header { gap: 0.35rem; }
+}
+
+@media (max-width: 480px) {
+    .stats-grid { grid-template-columns: 1fr; }
+    .navbar-nav { gap: 0; }
+    .nav-link   { padding: 0.3rem 0.5rem; }
+    .nav-user   { padding: 0.25rem 0.5rem; }
+    .form-card  { padding: 1.25rem; }
 }

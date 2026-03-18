@@ -1,106 +1,61 @@
 {% extends "base.html" %}
-{% block title %}Report — {{ timeline.title }}{% endblock %}
+{% block title %}Overview — {{ timeline.title }}{% endblock %}
 {% block content %}
 <div class="container">
 
-    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem;">
+    <div class="page-header">
         <div>
-            <a href="{{ url_for('view_timeline', timeline_id=timeline.id) }}" style="color:var(--text-secondary); text-decoration:none; font-size:0.85rem;">
-                ← Back to detail view
-            </a>
-            <h1 style="margin:0.25rem 0 0;">{{ timeline.title }}</h1>
+            <nav class="breadcrumb">
+                <a href="{{ url_for('view_timeline', timeline_id=timeline.id) }}">
+                    <i class="fas fa-arrow-left"></i> Back to detail view
+                </a>
+            </nav>
+            <h1>{{ timeline.title }}</h1>
         </div>
         <a href="{{ url_for('export_timeline_pdf', timeline_id=timeline.id) }}" class="btn btn-primary">
             <i class="fas fa-file-pdf"></i> Export PDF
         </a>
     </div>
 
-    <!-- Metadata -->
-    <div class="card" style="padding:1.25rem; margin-bottom:1.5rem;">
-        <div style="display:flex; flex-wrap:wrap; gap:2rem;">
-            <div>
-                <div style="color:var(--text-secondary); font-size:0.75rem; text-transform:uppercase; letter-spacing:.05em;">Severity</div>
-                <span class="badge" style="background:{{ timeline.severity_color }}22; color:{{ timeline.severity_color }}; border:1px solid {{ timeline.severity_color }}44; margin-top:.25rem; display:inline-block;">
-                    {{ timeline.severity | upper }}
-                </span>
-            </div>
-            <div>
-                <div style="color:var(--text-secondary); font-size:0.75rem; text-transform:uppercase; letter-spacing:.05em;">Status</div>
-                <span class="badge" style="background:{{ timeline.status_color }}22; color:{{ timeline.status_color }}; border:1px solid {{ timeline.status_color }}44; margin-top:.25rem; display:inline-block;">
-                    {{ timeline.status | upper }}
-                </span>
-            </div>
-            {% if timeline.attack_type %}
-            <div>
-                <div style="color:var(--text-secondary); font-size:0.75rem; text-transform:uppercase; letter-spacing:.05em;">Attack Type</div>
-                <div style="margin-top:.25rem;">{{ timeline.attack_type }}</div>
-            </div>
-            {% endif %}
-            <div>
-                <div style="color:var(--text-secondary); font-size:0.75rem; text-transform:uppercase; letter-spacing:.05em;">Events</div>
-                <div style="margin-top:.25rem;">{{ events | length }}</div>
-            </div>
-            <div>
-                <div style="color:var(--text-secondary); font-size:0.75rem; text-transform:uppercase; letter-spacing:.05em;">Created</div>
-                <div style="margin-top:.25rem;">{{ timeline.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
-            </div>
-            <div>
-                <div style="color:var(--text-secondary); font-size:0.75rem; text-transform:uppercase; letter-spacing:.05em;">Last Updated</div>
-                <div style="margin-top:.25rem;">{{ timeline.updated_at.strftime('%Y-%m-%d %H:%M') }}</div>
-            </div>
-        </div>
-        {% if timeline.description %}
-        <p style="margin:1rem 0 0; color:var(--text-secondary);">{{ timeline.description }}</p>
+    <!-- Metadata strip -->
+    <div class="report-meta">
+        <span class="badge" style="background:{{ timeline.severity_color }}22; color:{{ timeline.severity_color }}; border:1px solid {{ timeline.severity_color }}44;">
+            {{ timeline.severity | upper }}
+        </span>
+        <span class="badge" style="background:{{ timeline.status_color }}22; color:{{ timeline.status_color }}; border:1px solid {{ timeline.status_color }}44;">
+            {{ timeline.status | upper }}
+        </span>
+        {% if timeline.attack_type %}
+        <span class="meta-item"><i class="fas fa-crosshairs"></i> {{ timeline.attack_type }}</span>
         {% endif %}
+        <span class="meta-item"><i class="fas fa-calendar"></i> {{ timeline.created_at.strftime('%Y-%m-%d') }}</span>
+        <span class="meta-item"><i class="fas fa-stream"></i> {{ events | length }} event{{ 's' if events | length != 1 }}</span>
     </div>
 
-    <!-- Compact event table -->
+    {% if timeline.description %}
+    <p style="color:var(--text-secondary); font-size:0.875rem; margin-bottom:1.75rem; max-width:680px;">{{ timeline.description }}</p>
+    {% endif %}
+
     {% if events %}
-    <div class="card" style="padding:0; overflow:hidden;">
-        <table style="width:100%; border-collapse:collapse; font-size:0.875rem;">
-            <thead>
-                <tr style="border-bottom:1px solid var(--border-color);">
-                    <th style="padding:.75rem 1rem; text-align:left; color:var(--text-secondary); font-weight:500; white-space:nowrap;">Time</th>
-                    <th style="padding:.75rem 1rem; text-align:left; color:var(--text-secondary); font-weight:500;">Phase</th>
-                    <th style="padding:.75rem 1rem; text-align:left; color:var(--text-secondary); font-weight:500;">Event</th>
-                    <th style="padding:.75rem 1rem; text-align:left; color:var(--text-secondary); font-weight:500;">Src → Dst</th>
-                    <th style="padding:.75rem 1rem; text-align:left; color:var(--text-secondary); font-weight:500;">MITRE</th>
-                    <th style="padding:.75rem 1rem; text-align:left; color:var(--text-secondary); font-weight:500;">IOC</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for event in events %}
-                <tr style="border-bottom:1px solid var(--border-color);">
-                    <td style="padding:.65rem 1rem; white-space:nowrap; font-family:monospace; color:var(--text-secondary);">
-                        {{ event.event_time.strftime('%Y-%m-%d %H:%M') }}
-                    </td>
-                    <td style="padding:.65rem 1rem; white-space:nowrap;">
-                        <span style="display:inline-flex; align-items:center; gap:.4rem; color:{{ event.type_color }};">
-                            <i class="fas {{ event.type_icon }}" style="font-size:.75rem;"></i>
-                            {{ event.event_type | replace('_', ' ') | title }}
-                        </span>
-                    </td>
-                    <td style="padding:.65rem 1rem;">
-                        <strong>{{ event.title }}</strong>
-                        {% if event.description %}
-                        <div style="color:var(--text-secondary); font-size:0.8rem; margin-top:.2rem;">{{ event.description | truncate(80) }}</div>
-                        {% endif %}
-                    </td>
-                    <td style="padding:.65rem 1rem; font-family:monospace; font-size:0.8rem; white-space:nowrap;">
-                        {% if event.source_ip or event.destination_ip %}
-                            {{ event.source_ip or '—' }} → {{ event.destination_ip or '—' }}
-                        {% else %}—{% endif %}
-                    </td>
-                    <td style="padding:.65rem 1rem; font-family:monospace; font-size:0.8rem;">
-                        {{ event.mitre_technique or '—' }}
-                    </td>
-                    <td style="padding:.65rem 1rem; font-size:0.8rem; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                        {{ event.indicator or '—' }}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="report-timeline">
+        {% for event in events %}
+        <div class="report-event">
+            <div class="report-event-dot" style="background:{{ event.type_color }};"></div>
+            <div class="report-event-body">
+                <div class="report-event-header">
+                    <span class="report-event-time">{{ event.event_time.strftime('%Y-%m-%d %H:%M') }}</span>
+                    <span class="report-event-phase" style="color:{{ event.type_color }};">
+                        <i class="fas {{ event.type_icon }}"></i>
+                        {{ event.event_type | replace('_', ' ') | title }}
+                    </span>
+                    {% if event.mitre_technique %}
+                    <span class="report-mitre">{{ event.mitre_technique }}</span>
+                    {% endif %}
+                </div>
+                <div class="report-event-title">{{ event.title }}</div>
+            </div>
+        </div>
+        {% endfor %}
     </div>
     {% else %}
     <div class="empty-state">

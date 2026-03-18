@@ -356,6 +356,13 @@ def timeline_report(timeline_id):
     return render_template('timeline_report.html', timeline=timeline, events=events)
 
 
+def _pdf_safe(text):
+    """Sanitize text for fpdf2 built-in fonts (Latin-1 only). Replaces unencodable chars."""
+    if text is None:
+        return 'N/A'
+    return str(text).encode('latin-1', errors='replace').decode('latin-1')
+
+
 @app.route('/timeline/<int:timeline_id>/export.pdf')
 @login_required
 def export_timeline_pdf(timeline_id):
@@ -371,20 +378,20 @@ def export_timeline_pdf(timeline_id):
 
     # Title
     pdf.set_font('Helvetica', 'B', 15)
-    pdf.cell(0, 8, timeline.title, new_x='LMARGIN', new_y='NEXT')
+    pdf.cell(0, 8, _pdf_safe(timeline.title), new_x='LMARGIN', new_y='NEXT')
 
     # Metadata line
     pdf.set_font('Helvetica', '', 8)
     meta = (f"Severity: {timeline.severity.upper()}  |  Status: {timeline.status.upper()}"
-            + (f"  |  Attack Type: {timeline.attack_type}" if timeline.attack_type else '')
+            + (f"  |  Attack Type: {_pdf_safe(timeline.attack_type)}" if timeline.attack_type else '')
             + f"  |  Events: {len(events)}"
             + f"  |  Created: {timeline.created_at.strftime('%Y-%m-%d %H:%M UTC')}"
             + f"  |  Exported: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}")
-    pdf.cell(0, 5, meta, new_x='LMARGIN', new_y='NEXT')
+    pdf.cell(0, 5, _pdf_safe(meta), new_x='LMARGIN', new_y='NEXT')
 
     if timeline.description:
         pdf.set_font('Helvetica', 'I', 8)
-        pdf.multi_cell(0, 4, timeline.description)
+        pdf.multi_cell(0, 4, _pdf_safe(timeline.description))
 
     pdf.ln(4)
 
@@ -405,13 +412,13 @@ def export_timeline_pdf(timeline_id):
         pdf.set_fill_color(249, 250, 251) if fill else pdf.set_fill_color(255, 255, 255)
         pdf.set_font('Helvetica', '', 7.5)
         row = [
-            (event.event_time.strftime('%Y-%m-%d %H:%M'), 32),
-            (event.event_type.replace('_', ' ').title(), 38),
-            (event.title[:55], 72),
-            (event.source_ip or '\u2014', 28),
-            (event.destination_ip or '\u2014', 28),
-            (event.mitre_technique or '\u2014', 18),
-            ((event.indicator or '\u2014')[:45], 51),
+            (_pdf_safe(event.event_time.strftime('%Y-%m-%d %H:%M')), 32),
+            (_pdf_safe(event.event_type.replace('_', ' ').title()), 38),
+            (_pdf_safe(event.title[:55]), 72),
+            (_pdf_safe(event.source_ip or 'N/A'), 28),
+            (_pdf_safe(event.destination_ip or 'N/A'), 28),
+            (_pdf_safe(event.mitre_technique or 'N/A'), 18),
+            (_pdf_safe((event.indicator or 'N/A')[:45]), 51),
         ]
         for text, w in row:
             pdf.cell(w, 6, text, border=1, fill=True)
@@ -420,7 +427,7 @@ def export_timeline_pdf(timeline_id):
 
     response = make_response(bytes(pdf.output()))
     response.headers['Content-Type'] = 'application/pdf'
-    filename = timeline.title.replace(' ', '_')
+    filename = _pdf_safe(timeline.title.replace(' ', '_'))
     response.headers['Content-Disposition'] = f'attachment; filename="{filename}.pdf"'
     return response
 
