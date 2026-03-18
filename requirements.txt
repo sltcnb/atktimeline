@@ -7,4 +7,4 @@ Werkzeug==3.0.1
 email-validator==2.1.0
 psycopg2-binary==2.9.9
 gunicorn==21.2.0
-xhtml2pdf==0.2.16
+fpdf2==2.7.9

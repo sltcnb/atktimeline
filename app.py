@@ -2,7 +2,6 @@ import os
 import click
 from datetime import datetime
 from flask import Flask, render_template, redirect, url_for, flash, request, abort, make_response
-from io import BytesIO
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from flask_wtf import FlaskForm
@@ -360,16 +359,66 @@ def timeline_report(timeline_id):
 @app.route('/timeline/<int:timeline_id>/export.pdf')
 @login_required
 def export_timeline_pdf(timeline_id):
-    from xhtml2pdf import pisa
+    from fpdf import FPDF
     timeline = Timeline.query.get_or_404(timeline_id)
     if timeline.user_id != current_user.id:
         abort(403)
     events = timeline.events.all()
-    now = datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')
-    html = render_template('timeline_pdf.html', timeline=timeline, events=events, now=now)
-    buf = BytesIO()
-    pisa.pisaDocument(BytesIO(html.encode('utf-8')), buf)
-    response = make_response(buf.getvalue())
+
+    pdf = FPDF(orientation='L', unit='mm', format='A4')
+    pdf.set_margins(10, 10, 10)
+    pdf.add_page()
+
+    # Title
+    pdf.set_font('Helvetica', 'B', 15)
+    pdf.cell(0, 8, timeline.title, new_x='LMARGIN', new_y='NEXT')
+
+    # Metadata line
+    pdf.set_font('Helvetica', '', 8)
+    meta = (f"Severity: {timeline.severity.upper()}  |  Status: {timeline.status.upper()}"
+            + (f"  |  Attack Type: {timeline.attack_type}" if timeline.attack_type else '')
+            + f"  |  Events: {len(events)}"
+            + f"  |  Created: {timeline.created_at.strftime('%Y-%m-%d %H:%M UTC')}"
+            + f"  |  Exported: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}")
+    pdf.cell(0, 5, meta, new_x='LMARGIN', new_y='NEXT')
+
+    if timeline.description:
+        pdf.set_font('Helvetica', 'I', 8)
+        pdf.multi_cell(0, 4, timeline.description)
+
+    pdf.ln(4)
+
+    # Table header
+    cols = [('Time', 32), ('Phase', 38), ('Event', 72), ('Source IP', 28),
+            ('Dest IP', 28), ('MITRE', 18), ('IOC / Indicator', 51)]
+    pdf.set_fill_color(15, 52, 96)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font('Helvetica', 'B', 8)
+    for label, w in cols:
+        pdf.cell(w, 7, label, border=1, fill=True)
+    pdf.ln()
+
+    # Table rows
+    pdf.set_text_color(0, 0, 0)
+    fill = False
+    for event in events:
+        pdf.set_fill_color(249, 250, 251) if fill else pdf.set_fill_color(255, 255, 255)
+        pdf.set_font('Helvetica', '', 7.5)
+        row = [
+            (event.event_time.strftime('%Y-%m-%d %H:%M'), 32),
+            (event.event_type.replace('_', ' ').title(), 38),
+            (event.title[:55], 72),
+            (event.source_ip or '\u2014', 28),
+            (event.destination_ip or '\u2014', 28),
+            (event.mitre_technique or '\u2014', 18),
+            ((event.indicator or '\u2014')[:45], 51),
+        ]
+        for text, w in row:
+            pdf.cell(w, 6, text, border=1, fill=True)
+        pdf.ln()
+        fill = not fill
+
+    response = make_response(bytes(pdf.output()))
     response.headers['Content-Type'] = 'application/pdf'
     filename = timeline.title.replace(' ', '_')
     response.headers['Content-Disposition'] = f'attachment; filename="{filename}.pdf"'
