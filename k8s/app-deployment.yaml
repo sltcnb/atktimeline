@@ -22,14 +22,16 @@ spec:
         - name: db-init
           image: atktimeline:latest
           imagePullPolicy: IfNotPresent
-          command: ["python", "-c", """
-import os
-os.environ.setdefault('FLASK_APP', 'app')
-from app import app, db
-with app.app_context():
-    db.create_all()
-    print('Database tables created.')
-"""]
+          command:
+            - python
+            - -c
+            - |
+              import os
+              os.environ.setdefault('FLASK_APP', 'app')
+              from app import app, db
+              with app.app_context():
+                  db.create_all()
+                  print('Database tables created.')
           env:
             - name: DATABASE_URL
               valueFrom:

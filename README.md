@@ -4,7 +4,7 @@ A self-hosted attack timeline builder for incident response and threat analysis.
 
 Map events to **MITRE ATT&CK phases**, track source/destination IPs, artifacts, and IOCs across visual timelines.
 
-![Python](https://img.shields.io/badge/Python-3.14-blue)
+![Python](https://img.shields.io/badge/Python-3.12-blue)
 ![Flask](https://img.shields.io/badge/Flask-3.x-lightgrey)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
