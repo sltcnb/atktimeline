@@ -35,7 +35,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    timelines = db.relationship('Timeline', backref='owner', lazy=True)
+    timelines = db.relationship('Timeline', backref='owner', lazy=True, cascade='all, delete-orphan')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -49,25 +49,59 @@ class Timeline(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
+    attack_type = db.Column(db.String(100))
+    severity = db.Column(db.String(20), default='medium')   # low, medium, high, critical
+    status = db.Column(db.String(20), default='open')       # open, investigating, resolved, closed
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    events = db.relationship('Event', backref='timeline', lazy=True, cascade='all, delete-orphan',
-                             order_by='Event.event_time')
+    events = db.relationship('TimelineEvent', backref='timeline', lazy='dynamic',
+                             cascade='all, delete-orphan', order_by='TimelineEvent.event_time')
+
+    @property
+    def severity_color(self):
+        return {'low': '#28a745', 'medium': '#ffc107', 'high': '#fd7e14', 'critical': '#dc3545'}.get(self.severity, '#6c757d')
+
+    @property
+    def status_color(self):
+        return {'open': '#dc3545', 'investigating': '#ffc107', 'resolved': '#28a745', 'closed': '#6c757d'}.get(self.status, '#6c757d')
 
 
-class Event(db.Model):
-    __tablename__ = 'events'
+class TimelineEvent(db.Model):
+    __tablename__ = 'timeline_events'
     id = db.Column(db.Integer, primary_key=True)
     event_time = db.Column(db.DateTime, nullable=False)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
     event_type = db.Column(db.String(50), nullable=False, default='other')
     source_ip = db.Column(db.String(45))
-    dest_ip = db.Column(db.String(45))
-    artifact = db.Column(db.Text)
+    destination_ip = db.Column(db.String(45))
+    indicator = db.Column(db.String(500))
+    mitre_technique = db.Column(db.String(20))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     timeline_id = db.Column(db.Integer, db.ForeignKey('timelines.id'), nullable=False)
+
+    @property
+    def type_color(self):
+        return {
+            'reconnaissance': '#6366f1', 'initial_access': '#f59e0b', 'execution': '#ef4444',
+            'persistence': '#e11d48', 'privilege_escalation': '#dc2626', 'defense_evasion': '#78716c',
+            'credential_access': '#d97706', 'discovery': '#0ea5e9', 'lateral_movement': '#8b5cf6',
+            'collection': '#14b8a6', 'exfiltration': '#f97316', 'command_and_control': '#7c3aed',
+            'impact': '#b91c1c', 'detection': '#22c55e', 'response': '#3b82f6',
+        }.get(self.event_type, '#6b7280')
+
+    @property
+    def type_icon(self):
+        return {
+            'reconnaissance': 'fa-binoculars', 'initial_access': 'fa-door-open',
+            'execution': 'fa-terminal', 'persistence': 'fa-anchor',
+            'privilege_escalation': 'fa-arrow-up', 'defense_evasion': 'fa-eye-slash',
+            'credential_access': 'fa-key', 'discovery': 'fa-search',
+            'lateral_movement': 'fa-arrows-alt', 'collection': 'fa-database',
+            'exfiltration': 'fa-upload', 'command_and_control': 'fa-satellite-dish',
+            'impact': 'fa-explosion', 'detection': 'fa-bell', 'response': 'fa-shield-alt',
+        }.get(self.event_type, 'fa-circle')
 
 
 @login_manager.user_loader
@@ -86,57 +120,47 @@ class LoginForm(FlaskForm):
 class TimelineForm(FlaskForm):
     title = StringField('Title', validators=[DataRequired(), Length(max=200)])
     description = TextAreaField('Description', validators=[Optional()])
+    attack_type = StringField('Attack Type', validators=[Optional(), Length(max=100)])
+    severity = SelectField('Severity', choices=[
+        ('low', 'Low'), ('medium', 'Medium'), ('high', 'High'), ('critical', 'Critical')
+    ], default='medium')
+    status = SelectField('Status', choices=[
+        ('open', 'Open'), ('investigating', 'Investigating'),
+        ('resolved', 'Resolved'), ('closed', 'Closed')
+    ], default='open')
     submit = SubmitField('Save Timeline')
 
 
 class EventForm(FlaskForm):
     event_time = DateTimeLocalField('Event Time', format='%Y-%m-%dT%H:%M',
-                                     validators=[DataRequired()])
+                                    validators=[DataRequired()])
     title = StringField('Event Title', validators=[DataRequired(), Length(max=200)])
     description = TextAreaField('Description', validators=[Optional()])
     event_type = SelectField('MITRE ATT&CK Phase', choices=[
-        ('reconnaissance', 'Reconnaissance'),
-        ('initial_access', 'Initial Access'),
-        ('execution', 'Execution'),
-        ('persistence', 'Persistence'),
-        ('privilege_escalation', 'Privilege Escalation'),
-        ('defense_evasion', 'Defense Evasion'),
-        ('credential_access', 'Credential Access'),
-        ('discovery', 'Discovery'),
-        ('lateral_movement', 'Lateral Movement'),
-        ('collection', 'Collection'),
-        ('exfiltration', 'Exfiltration'),
-        ('command_and_control', 'Command & Control'),
-        ('impact', 'Impact'),
-        ('detection', 'Detection'),
-        ('response', 'Response'),
+        ('reconnaissance', 'Reconnaissance'), ('initial_access', 'Initial Access'),
+        ('execution', 'Execution'), ('persistence', 'Persistence'),
+        ('privilege_escalation', 'Privilege Escalation'), ('defense_evasion', 'Defense Evasion'),
+        ('credential_access', 'Credential Access'), ('discovery', 'Discovery'),
+        ('lateral_movement', 'Lateral Movement'), ('collection', 'Collection'),
+        ('exfiltration', 'Exfiltration'), ('command_and_control', 'Command & Control'),
+        ('impact', 'Impact'), ('detection', 'Detection'), ('response', 'Response'),
         ('other', 'Other')
     ])
     source_ip = StringField('Source IP', validators=[Optional(), Length(max=45)])
-    dest_ip = StringField('Destination IP', validators=[Optional(), Length(max=45)])
-    artifact = TextAreaField('Artifact / IOC', validators=[Optional()])
+    destination_ip = StringField('Destination IP', validators=[Optional(), Length(max=45)])
+    mitre_technique = StringField('MITRE Technique ID', validators=[Optional(), Length(max=20)])
+    indicator = TextAreaField('Indicator / IOC', validators=[Optional()])
     submit = SubmitField('Save Event')
 
 # ---------------------
-# Color mapping
+# Color mapping (template context)
 # ---------------------
 EVENT_COLORS = {
-    'reconnaissance': '#6366f1',
-    'initial_access': '#f59e0b',
-    'execution': '#ef4444',
-    'persistence': '#e11d48',
-    'privilege_escalation': '#dc2626',
-    'defense_evasion': '#78716c',
-    'credential_access': '#d97706',
-    'discovery': '#0ea5e9',
-    'lateral_movement': '#8b5cf6',
-    'collection': '#14b8a6',
-    'exfiltration': '#f97316',
-    'command_and_control': '#7c3aed',
-    'impact': '#b91c1c',
-    'detection': '#22c55e',
-    'response': '#3b82f6',
-    'other': '#6b7280'
+    'reconnaissance': '#6366f1', 'initial_access': '#f59e0b', 'execution': '#ef4444',
+    'persistence': '#e11d48', 'privilege_escalation': '#dc2626', 'defense_evasion': '#78716c',
+    'credential_access': '#d97706', 'discovery': '#0ea5e9', 'lateral_movement': '#8b5cf6',
+    'collection': '#14b8a6', 'exfiltration': '#f97316', 'command_and_control': '#7c3aed',
+    'impact': '#b91c1c', 'detection': '#22c55e', 'response': '#3b82f6', 'other': '#6b7280'
 }
 
 @app.context_processor
@@ -187,7 +211,13 @@ def logout():
 @login_required
 def dashboard():
     timelines = Timeline.query.filter_by(user_id=current_user.id).order_by(Timeline.updated_at.desc()).all()
-    return render_template('dashboard.html', timelines=timelines)
+    stats = {
+        'total': len(timelines),
+        'open': sum(1 for t in timelines if t.status in ('open', 'investigating')),
+        'critical': sum(1 for t in timelines if t.severity == 'critical'),
+        'events': sum(t.events.count() for t in timelines),
+    }
+    return render_template('dashboard.html', timelines=timelines, stats=stats)
 
 
 @app.route('/timeline/new', methods=['GET', 'POST'])
@@ -198,13 +228,16 @@ def new_timeline():
         timeline = Timeline(
             title=form.title.data,
             description=form.description.data,
+            attack_type=form.attack_type.data,
+            severity=form.severity.data,
+            status=form.status.data,
             user_id=current_user.id
         )
         db.session.add(timeline)
         db.session.commit()
         flash('Timeline created!', 'success')
         return redirect(url_for('view_timeline', timeline_id=timeline.id))
-    return render_template('new_timeline.html', form=form)
+    return render_template('create_timeline.html', form=form)
 
 
 @app.route('/timeline/<int:timeline_id>')
@@ -213,7 +246,8 @@ def view_timeline(timeline_id):
     timeline = Timeline.query.get_or_404(timeline_id)
     if timeline.user_id != current_user.id:
         abort(403)
-    return render_template('view_timeline.html', timeline=timeline)
+    events = timeline.events.all()
+    return render_template('view_timeline.html', timeline=timeline, events=events)
 
 
 @app.route('/timeline/<int:timeline_id>/edit', methods=['GET', 'POST'])
@@ -226,10 +260,13 @@ def edit_timeline(timeline_id):
     if form.validate_on_submit():
         timeline.title = form.title.data
         timeline.description = form.description.data
+        timeline.attack_type = form.attack_type.data
+        timeline.severity = form.severity.data
+        timeline.status = form.status.data
         db.session.commit()
         flash('Timeline updated!', 'success')
         return redirect(url_for('view_timeline', timeline_id=timeline.id))
-    return render_template('new_timeline.html', form=form, editing=True, timeline=timeline)
+    return render_template('create_timeline.html', form=form, editing=True, timeline=timeline)
 
 
 @app.route('/timeline/<int:timeline_id>/delete', methods=['POST'])
@@ -252,14 +289,15 @@ def add_event(timeline_id):
         abort(403)
     form = EventForm()
     if form.validate_on_submit():
-        event = Event(
+        event = TimelineEvent(
             event_time=form.event_time.data,
             title=form.title.data,
             description=form.description.data,
             event_type=form.event_type.data,
             source_ip=form.source_ip.data,
-            dest_ip=form.dest_ip.data,
-            artifact=form.artifact.data,
+            destination_ip=form.destination_ip.data,
+            mitre_technique=form.mitre_technique.data,
+            indicator=form.indicator.data,
             timeline_id=timeline.id
         )
         db.session.add(event)
@@ -275,7 +313,7 @@ def edit_event(timeline_id, event_id):
     timeline = Timeline.query.get_or_404(timeline_id)
     if timeline.user_id != current_user.id:
         abort(403)
-    event = Event.query.get_or_404(event_id)
+    event = TimelineEvent.query.get_or_404(event_id)
     if event.timeline_id != timeline.id:
         abort(404)
     form = EventForm(obj=event)
@@ -285,8 +323,9 @@ def edit_event(timeline_id, event_id):
         event.description = form.description.data
         event.event_type = form.event_type.data
         event.source_ip = form.source_ip.data
-        event.dest_ip = form.dest_ip.data
-        event.artifact = form.artifact.data
+        event.destination_ip = form.destination_ip.data
+        event.mitre_technique = form.mitre_technique.data
+        event.indicator = form.indicator.data
         db.session.commit()
         flash('Event updated!', 'success')
         return redirect(url_for('view_timeline', timeline_id=timeline.id))
@@ -299,7 +338,7 @@ def delete_event(timeline_id, event_id):
     timeline = Timeline.query.get_or_404(timeline_id)
     if timeline.user_id != current_user.id:
         abort(403)
-    event = Event.query.get_or_404(event_id)
+    event = TimelineEvent.query.get_or_404(event_id)
     if event.timeline_id != timeline.id:
         abort(404)
     db.session.delete(event)
@@ -315,7 +354,7 @@ def delete_event(timeline_id, event_id):
 @click.option('--email', prompt=True)
 @click.option('--password', prompt=True, hide_input=True, confirmation_prompt=True)
 def create_user(username, email, password):
-    """Create a new user account locally."""
+    """Create a new user account."""
     existing = User.query.filter((User.username == username) | (User.email == email)).first()
     if existing:
         click.echo('Error: Username or email already exists.')

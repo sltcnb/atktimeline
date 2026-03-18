@@ -85,10 +85,10 @@
                     </div>
 
                     <div class="event-actions">
-                        <a href="{{ url_for('edit_event', event_id=event.id) }}" class="btn btn-outline btn-sm">
+                        <a href="{{ url_for('edit_event', timeline_id=timeline.id, event_id=event.id) }}" class="btn btn-outline btn-sm">
                             <i class="fas fa-edit"></i> Edit
                         </a>
-                        <form method="POST" action="{{ url_for('delete_event', event_id=event.id) }}"
+                        <form method="POST" action="{{ url_for('delete_event', timeline_id=timeline.id, event_id=event.id) }}"
                               onsubmit="return confirm('Delete this event?');" style="display:inline;">
                             <button type="submit" class="btn btn-danger btn-sm">
                                 <i class="fas fa-trash"></i>
