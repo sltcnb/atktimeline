@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Attack Timeline{% endblock %}</title>
+    <title>{% block title %}ATK Timeline{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
@@ -14,28 +14,28 @@
     <nav class="navbar">
         <a href="{{ url_for('dashboard') }}" class="navbar-brand">
             <i class="fas fa-crosshairs"></i>
-            Attack Timeline
+            ATK Timeline
         </a>
         <ul class="navbar-nav">
-            <li><a href="{{ url_for('dashboard') }}" class="nav-link"><i class="fas fa-th-large"></i> Dashboard</a></li>
-            <li><a href="{{ url_for('new_timeline') }}" class="nav-link"><i class="fas fa-plus"></i> New Timeline</a></li>
+            <li><a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a></li>
+            <li><a href="{{ url_for('new_timeline') }}" class="nav-link">New Timeline</a></li>
             <li>
                 <span class="nav-user">
-                    <i class="fas fa-user-circle"></i>
+                    <i class="fas fa-circle" style="font-size:.5rem;"></i>
                     {{ current_user.username }}
                 </span>
             </li>
-            <li><a href="{{ url_for('logout') }}" class="nav-link"><i class="fas fa-sign-out-alt"></i></a></li>
+            <li><a href="{{ url_for('logout') }}" class="nav-link" style="color:var(--text-2);">Sign out</a></li>
         </ul>
     </nav>
     {% endif %}
 
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-    <div class="container flash-messages" style="padding-bottom: 0;">
+    <div class="container flash-messages" style="padding-bottom:0;">
         {% for category, message in messages %}
         <div class="alert alert-{{ category }}">
-            <i class="fas {% if category == 'success' %}fa-check-circle{% elif category == 'danger' %}fa-exclamation-circle{% elif category == 'warning' %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %}"></i>
+            <i class="fas {% if category == 'success' %}fa-check-circle{% elif category == 'danger' or category == 'error' %}fa-exclamation-circle{% elif category == 'warning' %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %}"></i>
             {{ message }}
         </div>
         {% endfor %}
@@ -46,15 +46,13 @@
     {% block content %}{% endblock %}
 
     <script>
-        // Auto-dismiss flash messages
         document.querySelectorAll('.alert').forEach(el => {
             setTimeout(() => {
-                el.style.transition = 'opacity 0.5s';
+                el.style.transition = 'opacity 0.4s';
                 el.style.opacity = '0';
-                setTimeout(() => el.remove(), 500);
+                setTimeout(() => el.remove(), 400);
             }, 4000);
         });
     </script>
 </body>
 </html>
-

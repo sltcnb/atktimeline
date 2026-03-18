@@ -169,8 +169,11 @@ spec:
                   number: 80
 EOF
 
+echo "Restarting pods to load new image..."
+kubectl rollout restart deployment/atktimeline -n "$NAMESPACE"
+
 echo "Waiting for app to be ready..."
-kubectl wait --for=condition=ready pod -l app=atktimeline -n "$NAMESPACE" --timeout=120s
+kubectl rollout status deployment/atktimeline -n "$NAMESPACE" --timeout=120s
 
 # ---------------------
 # Create admin user
