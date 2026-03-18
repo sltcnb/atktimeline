@@ -2,7 +2,7 @@
   "hostname": "timeline.csirt.lab",
   "namespace": "atktimeline",
   "image": "atktimeline:latest",
-  "traefik_entrypoint": "web",
+  "tls_secret": "atktimeline-tls",
   "admin": {
     "username": "admin",
     "email": "admin@csirt.lab",

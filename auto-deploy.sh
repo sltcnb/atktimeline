@@ -19,7 +19,7 @@ cfg() { jq -r "$1" "$CONFIG"; }
 HOSTNAME=$(cfg '.hostname')
 NAMESPACE=$(cfg '.namespace')
 IMAGE=$(cfg '.image')
-TRAEFIK_ENTRYPOINT=$(cfg '.traefik_entrypoint')
+TLS_SECRET=$(cfg '.tls_secret')
 ADMIN_USERNAME=$(cfg '.admin.username')
 ADMIN_EMAIL=$(cfg '.admin.email')
 ADMIN_PASSWORD=$(cfg '.admin.password')
@@ -102,16 +102,60 @@ echo "[5/6] Deploying ATK Timeline app..."
 kubectl apply -f k8s/app-deployment.yaml
 kubectl apply -f k8s/app-service.yaml
 
+# Middleware: redirect HTTP → HTTPS
+kubectl apply -f - <<EOF
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: redirect-https
+  namespace: $NAMESPACE
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
+EOF
+
+# Ingress: HTTP (redirects to HTTPS)
 kubectl apply -f - <<EOF
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: atktimeline
+  name: atktimeline-http
   namespace: $NAMESPACE
   annotations:
-    traefik.ingress.kubernetes.io/router.entrypoints: $TRAEFIK_ENTRYPOINT
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    traefik.ingress.kubernetes.io/router.middlewares: ${NAMESPACE}-redirect-https@kubernetescrd
 spec:
   ingressClassName: traefik
+  rules:
+    - host: $HOSTNAME
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: atktimeline-service
+                port:
+                  number: 80
+EOF
+
+# Ingress: HTTPS
+kubectl apply -f - <<EOF
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: atktimeline-https
+  namespace: $NAMESPACE
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - $HOSTNAME
+      secretName: $TLS_SECRET
   rules:
     - host: $HOSTNAME
       http:
@@ -192,6 +236,6 @@ echo " Port-forward:"
 echo "   kubectl port-forward svc/atktimeline-service 8080:80 -n $NAMESPACE"
 echo "   → http://localhost:8080"
 echo ""
-echo " Traefik ingress:"
-echo "   → http://$HOSTNAME"
+echo " Traefik ingress (HTTP redirects to HTTPS):"
+echo "   → https://$HOSTNAME"
 echo "==========================================="
