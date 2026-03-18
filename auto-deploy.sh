@@ -45,6 +45,9 @@ echo ""
 echo "[1/6] Building Docker image..."
 docker build -t "$IMAGE" .
 
+echo "Importing image into k3s containerd..."
+docker save "$IMAGE" | k3s ctr images import -
+
 # ---------------------
 # Create namespace
 # ---------------------
