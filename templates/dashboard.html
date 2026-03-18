@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - Attack Timeline{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1><i class="fas fa-th-large" style="color:var(--accent-blue)"></i> Dashboard</h1>
+        <a href="{{ url_for('create_timeline') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> New Timeline
+        </a>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class="fas fa-layer-group"></i></div>
+            <div class="stat-info">
+                <h3>{{ stats.total }}</h3>
+                <p>Total Timelines</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon red"><i class="fas fa-exclamation-circle"></i></div>
+            <div class="stat-info">
+                <h3>{{ stats.open }}</h3>
+                <p>Open Cases</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon yellow"><i class="fas fa-radiation"></i></div>
+            <div class="stat-info">
+                <h3>{{ stats.critical }}</h3>
+                <p>Critical</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon cyan"><i class="fas fa-stream"></i></div>
+            <div class="stat-info">
+                <h3>{{ stats.events }}</h3>
+                <p>Total Events</p>
+            </div>
+        </div>
+    </div>
+
+    {% if timelines %}
+    <div class="timeline-grid">
+        {% for t in timelines %}
+        <a href="{{ url_for('view_timeline', timeline_id=t.id) }}" class="timeline-card" style="text-decoration:none; color:inherit;">
+            <div class="timeline-card-header">
+                <h3>{{ t.title }}</h3>
+                <span class="badge" style="background:{{ t.severity_color }}22; color:{{ t.severity_color }}; border:1px solid {{ t.severity_color }}44;">
+                    {{ t.severity | upper }}
+                </span>
+            </div>
+            {% if t.description %}
+            <p>{{ t.description }}</p>
+            {% endif %}
+            <div class="timeline-card-meta">
+                <span>
+                    <i class="fas fa-circle" style="font-size:0.5rem; color:{{ t.status_color }};"></i>
+                    {{ t.status | capitalize }}
+                </span>
+                {% if t.attack_type %}
+                <span><i class="fas fa-tag"></i> {{ t.attack_type }}</span>
+                {% endif %}
+                <span><i class="fas fa-stream"></i> {{ t.events.count() }} events</span>
+                <span><i class="fas fa-clock"></i> {{ t.updated_at.strftime('%b %d, %Y') }}</span>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-crosshairs"></i>
+        <h3>No Timelines Yet</h3>
+        <p>Create your first attack timeline to start tracking incidents.</p>
+        <a href="{{ url_for('create_timeline') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Create Timeline
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

@@ -1,0 +1,13 @@
+{
+  "hostname": "timeline.csirt.lab",
+  "namespace": "atktimeline",
+  "image": "atktimeline:latest",
+  "traefik_entrypoint": "web",
+  "admin": {
+    "username": "admin",
+    "email": "admin@csirt.lab",
+    "password": "CHANGE_ME_NOW"
+  },
+  "postgres_password": "CHANGE_ME_NOW",
+  "flask_secret": "CHANGE_ME_NOW"
+}

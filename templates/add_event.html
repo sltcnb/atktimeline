@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}{% if editing %}Edit Event{% else %}Add Event{% endif %} - {{ timeline.title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="breadcrumb">
+        <a href="{{ url_for('dashboard') }}">Dashboard</a> &rsaquo;
+        <a href="{{ url_for('view_timeline', timeline_id=timeline.id) }}">{{ timeline.title }}</a> &rsaquo;
+        <span>{% if editing %}Edit Event{% else %}Add Event{% endif %}</span>
+    </div>
+
+    <div class="card form-card">
+        <h2>{% if editing %}✏️ Edit Event{% else %}➕ Add Event{% endif %}</h2>
+        <p class="subtitle">Timeline: <strong>{{ timeline.title }}</strong></p>
+
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.event_time.label }}
+                    {{ form.event_time(class="form-control") }}
+                    {% for error in form.event_time.errors %}
+                    <ul class="error-list"><li>{{ error }}</li></ul>
+                    {% endfor %}
+                </div>
+                <div class="form-group">
+                    {{ form.event_type.label }}
+                    {{ form.event_type(class="form-control") }}
+                </div>
+            </div>
+            <div class="form-group">
+                {{ form.title.label }}
+                {{ form.title(class="form-control", placeholder="e.g., Phishing email delivered to user") }}
+                {% for error in form.title.errors %}
+                <ul class="error-list"><li>{{ error }}</li></ul>
+                {% endfor %}
+            </div>
+            <div class="form-group">
+                {{ form.description.label }}
+                {{ form.description(class="form-control", placeholder="Detailed description of what happened...") }}
+            </div>
+            {% for field in form %}
+                {% if field.id not in ['csrf_token', 'submit', 'event_time', 'event_type', 'title', 'description'] %}
+                <div class="form-group">
+                    {{ field.label }}
+                    {{ field(class="form-control") }}
+                    {% for error in field.errors %}
+                    <ul class="error-list"><li>{{ error }}</li></ul>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endfor %}
+            <div class="form-actions">
+                <a href="{{ url_for('view_timeline', timeline_id=timeline.id) }}" class="btn btn-secondary">Cancel</a>
+                {{ form.submit(class="btn btn-primary") }}
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

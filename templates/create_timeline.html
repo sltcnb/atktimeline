@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if editing else 'Create' }} Timeline{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="form-card">
+        <h1>
+            <i class="fas fa-{{ 'edit' if editing else 'plus-circle' }}" style="color:var(--accent-blue)"></i>
+            {{ 'Edit' if editing else 'Create' }} Timeline
+        </h1>
+
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            <div class="form-group">
+                {{ form.title.label }}
+                {{ form.title(class="form-control", placeholder="e.g., Ransomware Incident - Server Cluster A") }}
+                {% for error in form.title.errors %}
+                <ul class="error-list"><li>{{ error }}</li></ul>
+                {% endfor %}
+            </div>
+            <div class="form-group">
+                {{ form.description.label }}
+                {{ form.description(class="form-control", placeholder="Describe the incident or attack scenario...") }}
+            </div>
+            <div class="form-group">
+                {{ form.attack_type.label }}
+                {{ form.attack_type(class="form-control", placeholder="e.g., Ransomware, Phishing, APT, DDoS") }}
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.severity.label }}
+                    {{ form.severity(class="form-control") }}
+                </div>
+                <div class="form-group">
+                    {{ form.status.label }}
+                    {{ form.status(class="form-control") }}
+                </div>
+            </div>
+            <div style="display:flex; gap:0.75rem; margin-top:0.5rem;">
+                {{ form.submit(class="btn btn-primary") }}
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
