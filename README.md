@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/banner.svg" alt="ATK Timeline" width="100%"></p>
+
 # ATK Timeline
 
 A self-hosted attack timeline builder for incident response and threat analysis. Built with Flask and PostgreSQL, deployable via Docker Compose or Kubernetes (Traefik).
