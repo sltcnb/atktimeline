@@ -1,10 +1,3 @@
-<p align="center"><img src="docs/banner.png" alt="ATK Timeline" width="100%"></p>
-
-
-## Demo
-
-<p align="center"><img src="docs/demo.png" alt="ATK Timeline demo" width="100%"></p>
-
 # ATK Timeline
 
 A self-hosted attack timeline builder for incident response and threat analysis. Built with Flask and PostgreSQL, deployable via Docker Compose or Kubernetes (Traefik).
@@ -16,6 +9,10 @@ Map events to **MITRE ATT&CK phases**, track source/destination IPs, artifacts, 
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 ---
+
+## Demo
+
+<p align="center"><img src="docs/demo.png" alt="ATK Timeline demo" width="100%"></p>
 
 ## Quick Start
 
