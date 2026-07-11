@@ -6,7 +6,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, TextAreaField, SelectField, DateTimeLocalField, SubmitField
-from wtforms.validators import DataRequired, Length, Email, Optional
+from wtforms.validators import DataRequired, Length, Optional
 from werkzeug.security import generate_password_hash, check_password_hash
 
 # ---------------------

@@ -89,9 +89,7 @@ atktimeline/
 ├── docker-compose.yml      # Local dev with PostgreSQL
 ├── Dockerfile
 ├── requirements.txt
-├── app.py                  # Flask application
-├── models.py
-├── forms.py
+├── app.py                  # Flask application (models, forms, routes)
 ├── deploy.md               # Full deployment guide
 ├── templates/
 ├── static/
