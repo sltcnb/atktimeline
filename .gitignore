@@ -1,0 +1,22 @@
+# Secrets and local config
+.env
+config.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.auditvenv/
+.pytest_cache/
+.ruff_cache/
+
+# Local database
+*.db
+instance/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
