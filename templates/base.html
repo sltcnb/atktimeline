@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Self-hosted attack timeline builder mapping incident events to MITRE ATT&CK phases.">
+    <meta name="color-scheme" content="dark">
     <title>{% block title %}ATK Timeline{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -10,10 +12,11 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
+    <a href="#main-content" class="skip-link">Skip to content</a>
     {% if current_user.is_authenticated %}
-    <nav class="navbar">
+    <nav class="navbar" aria-label="Primary">
         <a href="{{ url_for('dashboard') }}" class="navbar-brand">
-            <i class="fas fa-crosshairs"></i>
+            <i class="fas fa-crosshairs" aria-hidden="true"></i>
             ATK Timeline
         </a>
         <ul class="navbar-nav">
@@ -32,10 +35,10 @@
 
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-    <div class="container flash-messages" style="padding-bottom:0;">
+    <div class="container flash-messages" style="padding-bottom:0;" role="status" aria-live="polite">
         {% for category, message in messages %}
         <div class="alert alert-{{ category }}">
-            <i class="fas {% if category == 'success' %}fa-check-circle{% elif category == 'danger' or category == 'error' %}fa-exclamation-circle{% elif category == 'warning' %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %}"></i>
+            <i class="fas {% if category == 'success' %}fa-check-circle{% elif category == 'danger' or category == 'error' %}fa-exclamation-circle{% elif category == 'warning' %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %}" aria-hidden="true"></i>
             {{ message }}
         </div>
         {% endfor %}
@@ -43,7 +46,9 @@
     {% endif %}
     {% endwith %}
 
-    {% block content %}{% endblock %}
+    <main id="main-content">
+        {% block content %}{% endblock %}
+    </main>
 
     <script>
         document.querySelectorAll('.alert').forEach(el => {

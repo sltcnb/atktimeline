@@ -1,3 +1,23 @@
+/* ── Accessibility ──────────────────────────────────────────── */
+.skip-link {
+    position: absolute;
+    left: -999px;
+    top: 0;
+    z-index: 1000;
+    padding: 0.6rem 1rem;
+    background: #3b82f6;
+    color: #fff;
+    border-radius: 0 0 6px 0;
+    text-decoration: none;
+}
+.skip-link:focus {
+    left: 0;
+}
+:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+}
+
 /* ── Variables ──────────────────────────────────────────────── */
 :root {
     --bg-0:   #0f172a;
