@@ -3,6 +3,7 @@ import secrets
 import warnings
 import click
 from datetime import datetime
+from urllib.parse import urlparse
 from flask import Flask, render_template, redirect, url_for, flash, request, abort, make_response
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
@@ -200,6 +201,19 @@ EVENT_COLORS = {
 def inject_event_colors():
     return dict(event_colors=EVENT_COLORS)
 
+
+def is_safe_url(target):
+    """Return True only for local, relative paths.
+
+    Rejects any target that specifies a scheme or netloc (e.g.
+    ``https://evil.com`` or protocol-relative ``//evil.com``) to prevent
+    open-redirect attacks via the ``next`` query parameter.
+    """
+    if not target:
+        return False
+    parsed = urlparse(target)
+    return not parsed.scheme and not parsed.netloc
+
 # ---------------------
 # Routes
 # ---------------------
@@ -221,7 +235,9 @@ def login():
             login_user(user)
             flash('Welcome back!', 'success')
             next_page = request.args.get('next')
-            return redirect(next_page or url_for('dashboard'))
+            if next_page and is_safe_url(next_page):
+                return redirect(next_page)
+            return redirect(url_for('dashboard'))
         flash('Invalid username or password.', 'error')
     return render_template('login.html', form=form)
 

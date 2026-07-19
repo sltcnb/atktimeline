@@ -28,13 +28,14 @@ def client(tmp_path):
         yield client
 
 
-def _login(client):
-    page = client.get('/login')
+def _login(client, next_url=None, follow_redirects=True):
+    login_path = '/login' + (f'?next={next_url}' if next_url else '')
+    page = client.get(login_path)
     token = _extract_csrf(page.data)
     return client.post(
-        '/login',
+        login_path,
         data={'username': 'analyst', 'password': 'pw12345', 'csrf_token': token},
-        follow_redirects=True,
+        follow_redirects=follow_redirects,
     )
 
 
@@ -65,6 +66,26 @@ def test_login_and_dashboard(client):
     resp = _login(client)
     assert resp.status_code == 200
     assert b'Dashboard' in resp.data or b'dashboard' in resp.data
+
+
+def test_login_rejects_external_next_redirect(client):
+    resp = _login(client, next_url='http://evil.com', follow_redirects=False)
+    assert resp.status_code == 302
+    assert 'evil.com' not in resp.headers['Location']
+    assert resp.headers['Location'].endswith('/dashboard')
+
+
+def test_login_rejects_protocol_relative_next_redirect(client):
+    resp = _login(client, next_url='//evil.com', follow_redirects=False)
+    assert resp.status_code == 302
+    assert 'evil.com' not in resp.headers['Location']
+    assert resp.headers['Location'].endswith('/dashboard')
+
+
+def test_login_follows_safe_local_next_redirect(client):
+    resp = _login(client, next_url='/dashboard', follow_redirects=False)
+    assert resp.status_code == 302
+    assert resp.headers['Location'].endswith('/dashboard')
 
 
 def test_security_headers_present(client):
