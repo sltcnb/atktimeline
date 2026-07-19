@@ -4,9 +4,10 @@ A self-hosted attack timeline builder for incident response and threat analysis.
 
 Map events to **MITRE ATT&CK phases**, track source/destination IPs, artifacts, and IOCs across visual timelines.
 
+[![CI](https://github.com/sltcnb/atktimeline/actions/workflows/ci.yml/badge.svg)](https://github.com/sltcnb/atktimeline/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.12-blue)
 ![Flask](https://img.shields.io/badge/Flask-3.x-lightgrey)
-![License](https://img.shields.io/badge/License-MIT-green)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 ---
 
@@ -117,3 +118,40 @@ flask create-user --username analyst1 --email analyst1@csirt.lab --password Secu
 ```
 
 See [deploy.md](deploy.md) for the Kubernetes equivalent.
+
+---
+
+## Development & Testing
+
+```bash
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt ruff pytest
+
+export FLASK_APP=app.py SECRET_KEY=dev SESSION_COOKIE_SECURE=0
+ruff check .
+pytest
+flask run   # http://localhost:5000
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow.
+
+---
+
+## Security
+
+- `SECRET_KEY` must be set for any persistent deployment; the app generates an
+  ephemeral key (and warns) if it is missing.
+- Session cookies are `HttpOnly`, `SameSite=Lax`, and `Secure` by default
+  (set `SESSION_COOKIE_SECURE=0` only for local plain-HTTP dev).
+- CSRF protection is enforced on all state-changing requests.
+- Responses carry `X-Content-Type-Options`, `X-Frame-Options`, and
+  `Referrer-Policy` headers.
+
+To report a vulnerability, see [SECURITY.md](SECURITY.md).
+
+---
+
+## License
+
+Released under the [MIT License](LICENSE).

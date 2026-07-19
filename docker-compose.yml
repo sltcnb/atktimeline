@@ -19,6 +19,9 @@ services:
     environment:
       DATABASE_URL: postgresql://atktimeline:${POSTGRES_PASSWORD}@db:5432/atktimeline
       SECRET_KEY: ${SECRET_KEY}
+      # Local dev is served over plain HTTP; allow the session cookie without TLS.
+      # Remove or set to 1 when serving over HTTPS.
+      SESSION_COOKIE_SECURE: "0"
     depends_on:
       db:
         condition: service_healthy

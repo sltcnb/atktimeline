@@ -1,10 +1,14 @@
 import os
+import secrets
+import warnings
 import click
-from datetime import datetime
+from datetime import datetime, timezone
+from urllib.parse import urlparse
 from flask import Flask, render_template, redirect, url_for, flash, request, abort, make_response
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from flask_wtf import FlaskForm
+from flask_wtf.csrf import CSRFProtect
 from wtforms import StringField, PasswordField, TextAreaField, SelectField, DateTimeLocalField, SubmitField
 from wtforms.validators import DataRequired, Length, Optional
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -17,13 +21,43 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
     'DATABASE_URL',
     'sqlite:///timeline.db'
 )
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-me')
+
+_secret_key = os.environ.get('SECRET_KEY')
+if not _secret_key:
+    # No key supplied: safe to auto-generate for local/dev use, but sessions
+    # will not survive a restart and this must never be relied on in production.
+    warnings.warn(
+        'SECRET_KEY is not set; generating an ephemeral key. '
+        'Set SECRET_KEY in the environment for any persistent or production deployment.',
+        stacklevel=1,
+    )
+    _secret_key = secrets.token_hex(32)
+app.config['SECRET_KEY'] = _secret_key
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Session cookie hardening. SECURE is enabled unless explicitly disabled
+# (e.g. for plain-HTTP local development) via SESSION_COOKIE_SECURE=0.
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = (
+    os.environ.get('SESSION_COOKIE_SECURE', '1') not in ('0', 'false', 'False')
+)
+
 db = SQLAlchemy(app)
+csrf = CSRFProtect(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message_category = 'error'
+
+
+@app.after_request
+def set_security_headers(response):
+    """Apply conservative security headers to every response."""
+    response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+    response.headers.setdefault('X-Frame-Options', 'DENY')
+    response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+    return response
 
 # ---------------------
 # Models
@@ -34,7 +68,7 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     timelines = db.relationship('Timeline', backref='owner', lazy=True, cascade='all, delete-orphan')
 
     def set_password(self, password):
@@ -52,8 +86,8 @@ class Timeline(db.Model):
     attack_type = db.Column(db.String(100))
     severity = db.Column(db.String(20), default='medium')   # low, medium, high, critical
     status = db.Column(db.String(20), default='open')       # open, investigating, resolved, closed
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     events = db.relationship('TimelineEvent', backref='timeline', lazy='dynamic',
                              cascade='all, delete-orphan', order_by='TimelineEvent.event_time')
@@ -78,7 +112,7 @@ class TimelineEvent(db.Model):
     destination_ip = db.Column(db.String(45))
     indicator = db.Column(db.String(500))
     mitre_technique = db.Column(db.String(20))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     timeline_id = db.Column(db.Integer, db.ForeignKey('timelines.id'), nullable=False)
 
     @property
@@ -106,7 +140,7 @@ class TimelineEvent(db.Model):
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return db.session.get(User, int(user_id))
 
 # ---------------------
 # Forms
@@ -167,6 +201,19 @@ EVENT_COLORS = {
 def inject_event_colors():
     return dict(event_colors=EVENT_COLORS)
 
+
+def is_safe_url(target):
+    """Return True only for local, relative paths.
+
+    Rejects any target that specifies a scheme or netloc (e.g.
+    ``https://evil.com`` or protocol-relative ``//evil.com``) to prevent
+    open-redirect attacks via the ``next`` query parameter.
+    """
+    if not target:
+        return False
+    parsed = urlparse(target)
+    return not parsed.scheme and not parsed.netloc
+
 # ---------------------
 # Routes
 # ---------------------
@@ -188,7 +235,9 @@ def login():
             login_user(user)
             flash('Welcome back!', 'success')
             next_page = request.args.get('next')
-            return redirect(next_page or url_for('dashboard'))
+            if next_page and is_safe_url(next_page):
+                return redirect(next_page)
+            return redirect(url_for('dashboard'))
         flash('Invalid username or password.', 'error')
     return render_template('login.html', form=form)
 
@@ -415,7 +464,7 @@ def export_timeline_pdf(timeline_id):
     if timeline.attack_type:
         meta_parts.append(_pdf_safe(f"Attack: {timeline.attack_type}"))
     meta_parts.append(f"Created: {timeline.created_at.strftime('%Y-%m-%d %H:%M UTC')}")
-    meta_parts.append(f"Exported: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}")
+    meta_parts.append(f"Exported: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}")
     meta_parts.append(f"{len(events)} event{'s' if len(events) != 1 else ''}")
     pdf.cell(0, 5, _pdf_safe("  |  ".join(meta_parts)), new_x='LMARGIN', new_y='NEXT')
 
@@ -514,7 +563,7 @@ def export_timeline_pdf(timeline_id):
     pdf.set_text_color(100, 116, 139)
     pdf.cell(0, 5, _pdf_safe(
         f"ATK Timeline  |  {timeline.title}  |  "
-        f"{datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}"
+        f"{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"
     ), align='C')
 
     response = make_response(bytes(pdf.output()))
@@ -557,4 +606,5 @@ with app.app_context():
     db.create_all()
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    debug = os.environ.get('FLASK_DEBUG', '1') not in ('0', 'false', 'False')
+    app.run(debug=debug, host='127.0.0.1', port=5000)
