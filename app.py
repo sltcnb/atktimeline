@@ -2,7 +2,7 @@ import os
 import secrets
 import warnings
 import click
-from datetime import datetime
+from datetime import datetime, timezone
 from urllib.parse import urlparse
 from flask import Flask, render_template, redirect, url_for, flash, request, abort, make_response
 from flask_sqlalchemy import SQLAlchemy
@@ -68,7 +68,7 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     timelines = db.relationship('Timeline', backref='owner', lazy=True, cascade='all, delete-orphan')
 
     def set_password(self, password):
@@ -86,8 +86,8 @@ class Timeline(db.Model):
     attack_type = db.Column(db.String(100))
     severity = db.Column(db.String(20), default='medium')   # low, medium, high, critical
     status = db.Column(db.String(20), default='open')       # open, investigating, resolved, closed
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     events = db.relationship('TimelineEvent', backref='timeline', lazy='dynamic',
                              cascade='all, delete-orphan', order_by='TimelineEvent.event_time')
@@ -112,7 +112,7 @@ class TimelineEvent(db.Model):
     destination_ip = db.Column(db.String(45))
     indicator = db.Column(db.String(500))
     mitre_technique = db.Column(db.String(20))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     timeline_id = db.Column(db.Integer, db.ForeignKey('timelines.id'), nullable=False)
 
     @property
@@ -464,7 +464,7 @@ def export_timeline_pdf(timeline_id):
     if timeline.attack_type:
         meta_parts.append(_pdf_safe(f"Attack: {timeline.attack_type}"))
     meta_parts.append(f"Created: {timeline.created_at.strftime('%Y-%m-%d %H:%M UTC')}")
-    meta_parts.append(f"Exported: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}")
+    meta_parts.append(f"Exported: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}")
     meta_parts.append(f"{len(events)} event{'s' if len(events) != 1 else ''}")
     pdf.cell(0, 5, _pdf_safe("  |  ".join(meta_parts)), new_x='LMARGIN', new_y='NEXT')
 
@@ -563,7 +563,7 @@ def export_timeline_pdf(timeline_id):
     pdf.set_text_color(100, 116, 139)
     pdf.cell(0, 5, _pdf_safe(
         f"ATK Timeline  |  {timeline.title}  |  "
-        f"{datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}"
+        f"{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"
     ), align='C')
 
     response = make_response(bytes(pdf.output()))
