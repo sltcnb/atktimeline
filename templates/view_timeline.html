@@ -40,6 +40,7 @@
             </a>
             <form method="POST" action="{{ url_for('delete_timeline', timeline_id=timeline.id) }}"
                   onsubmit="return confirm('Delete this timeline and all events?');" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-danger btn-sm">
                     <i class="fas fa-trash"></i> Delete
                 </button>
@@ -96,6 +97,7 @@
                         </a>
                         <form method="POST" action="{{ url_for('delete_event', timeline_id=timeline.id, event_id=event.id) }}"
                               onsubmit="return confirm('Delete this event?');" style="display:inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-danger btn-sm">
                                 <i class="fas fa-trash"></i>
                             </button>
